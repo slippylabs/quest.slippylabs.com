@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AetherQuest // quest.slippylabs.com</title>
+  <meta name="description" content="High-fantasy turn-based JRPG inspired by AdventureQuest. 5 classes, tactical elemental combat, dynamically scaled dungeons, and cloud progress saving.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://quest.slippylabs.com/">
+  <meta property="og:title" content="AetherQuest // quest.slippylabs.com">
+  <meta property="og:description" content="High-fantasy turn-based JRPG inspired by AdventureQuest. 5 classes, tactical elemental combat, dynamically scaled dungeons, and cloud progress saving.">
+  <meta property="og:image" content="https://quest.slippylabs.com/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="AetherQuest // quest.slippylabs.com">
+  <meta name="twitter:description" content="High-fantasy turn-based JRPG inspired by AdventureQuest. 5 classes, tactical elemental combat, dynamically scaled dungeons, and cloud progress saving.">
+  <meta property="twitter:image" content="https://quest.slippylabs.com/og-image.png">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2232%22%20r%3D%2230%22%20fill%3D%22%230e2a22%22%20stroke%3D%22%2339ff8f%22%20stroke-width%3D%222%22%2F%3E%3Cpath%20d%3D%22M32%2010%20L44%2032%20L32%2054%20L20%2032%20Z%22%20fill%3D%22%23ffd700%22%20stroke%3D%22%23ff9130%22%20stroke-width%3D%222%22%2F%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2232%22%20r%3D%226%22%20fill%3D%22%2339ff8f%22%2F%3E%3C%2Fsvg%3E">
+  <meta name="theme-color" content="#050b10">
+  <link rel="stylesheet" href="style.css?v=2">
+  <script>
+    /* perf-lite support */
+    (function(){try{var k="slippy-fx",m=location.search.match(/[?&]fx=(lite|full)/),v=m?m[1]:localStorage.getItem(k);if(m)localStorage.setItem(k,v);if(v==="lite"||(v!=="full"&&(navigator.hardwareConcurrency||8)<=2))document.documentElement.classList.add("perf-lite");}catch(e){}})();
+  </script>
+</head>
+<body>
+
+<div class="starfield"></div>
+<div class="scanlines"></div>
+
+<main class="page-wrap">
+  <div class="hud-panel wide">
+    <div class="corner tl"></div>
+    <div class="corner tr"></div>
+    <div class="corner bl"></div>
+    <div class="corner br"></div>
+
+    <!-- Callsign Header -->
+    <div class="callsign-row">
+      <div class="callsign-left">
+        <div class="toad-avatar-wrap">
+          <svg class="toad-avatar" width="44" height="44" viewBox="0 0 64 64">
+            <circle cx="32" cy="34" r="22" fill="#1c8a52" stroke="#39ff8f" stroke-width="2"/>
+            <circle cx="20" cy="16" r="8" fill="#1c8a52" stroke="#39ff8f" stroke-width="2"/>
+            <circle cx="44" cy="16" r="8" fill="#1c8a52" stroke="#39ff8f" stroke-width="2"/>
+            <circle cx="20" cy="16" r="3.5" fill="#050b10"/>
+            <circle cx="44" cy="16" r="3.5" fill="#050b10"/>
+            <ellipse cx="24" cy="32" rx="4.5" ry="5.5" fill="#050b10"/>
+            <ellipse cx="40" cy="32" rx="4.5" ry="5.5" fill="#050b10"/>
+            <circle cx="24" cy="30" r="1.4" fill="#39ff8f"/>
+            <circle cx="40" cy="30" r="1.4" fill="#39ff8f"/>
+            <path d="M22 42 Q32 48 42 42" stroke="#050b10" stroke-width="2" fill="none" stroke-linecap="round"/>
+          </svg>
+          <div class="lock-reticle"></div>
+        </div>
+        <div>
+          <div class="game-title">AetherQuest</div>
+          <div class="game-sub">Battle for Lore // Turn-Based High Fantasy JRPG</div>
+        </div>
+      </div>
+
+      <div class="nav-links">
+        <button type="button" class="nav-btn" id="sound-btn" aria-label="Toggle Sound">🔊 Sound: ON</button>
+        <button type="button" class="nav-btn" id="music-btn" aria-label="Toggle Music">🔇 Music: OFF</button>
+        <button type="button" class="nav-btn" id="rules-btn">📖 Guide & Elements</button>
+        <button type="button" class="nav-btn" id="auth-btn">👤 Account</button>
+        <a href="https://lab.slippylabs.com" class="logout-link">Lab</a>
+        <a href="https://slippylabs.com" class="logout-link">Home</a>
+      </div>
+    </div>
+
+    <!-- Character Top HUD -->
+    <div class="player-hud-bar" id="player-hud-bar">
+      <div class="char-summary">
+        <div class="char-name-row">
+          <span class="char-name" id="hud-player-name">Hero</span>
+          <span class="char-level" id="hud-player-level">Lv. 1</span>
+          <span class="stat-pill" id="hud-stat-badge" style="display:none;" onclick="switchTownTab('character')">+0 Pts</span>
+        </div>
+        <div class="char-class" id="hud-player-class">🛡️ Warrior</div>
+      </div>
+
+      <div class="hud-gauges">
+        <div class="gauge-row">
+          <span class="gauge-label" style="color:#ff5252">HP</span>
+          <div class="gauge-bar">
+            <div class="gauge-fill hp-fill" id="hud-hp-fill" style="width: 100%;"></div>
+          </div>
+          <span class="gauge-text" id="hud-hp-text">100 / 100</span>
+        </div>
+        <div class="gauge-row">
+          <span class="gauge-label" style="color:#00e5ff">MP</span>
+          <div class="gauge-bar">
+            <div class="gauge-fill mp-fill" id="hud-mp-fill" style="width: 100%;"></div>
+          </div>
+          <span class="gauge-text" id="hud-mp-text">50 / 50</span>
+        </div>
+      </div>
+
+      <div class="hud-gauges">
+        <div class="gauge-row">
+          <span class="gauge-label" style="color:#ffd700">XP</span>
+          <div class="gauge-bar">
+            <div class="gauge-fill xp-fill" id="hud-xp-fill" style="width: 0%;"></div>
+          </div>
+          <span class="gauge-text" id="hud-xp-text">0 / 100 XP</span>
+        </div>
+      </div>
+
+      <div class="hud-meta-right">
+        <div class="gold-counter" id="hud-player-gold">💰 150</div>
+        <div id="hud-auth-user"></div>
+      </div>
+    </div>
+
+    <!-- TOWN HUB SCREEN -->
+    <div id="town-screen">
+      <div class="town-nav-tabs">
+        <button class="town-nav-btn active" data-tab="square" onclick="switchTownTab('square')">🏰 Town Square</button>
+        <button class="town-nav-btn" data-tab="inn" onclick="switchTownTab('inn')">🛏️ The Inn</button>
+        <button class="town-nav-btn" data-tab="armory" onclick="switchTownTab('armory')">⚔️ Armory & Blacksmith</button>
+        <button class="town-nav-btn" data-tab="spells" onclick="switchTownTab('spells')">🔮 Spell Library</button>
+        <button class="town-nav-btn" data-tab="alchemist" onclick="switchTownTab('alchemist')">🧪 Alchemist</button>
+        <button class="town-nav-btn" data-tab="quests" onclick="switchTownTab('quests')">🗺️ Quest Portals</button>
+        <button class="town-nav-btn" data-tab="character" onclick="switchTownTab('character')">📜 Character & Stats</button>
+      </div>
+
+      <div id="town-content">
+        <!-- Injected dynamically by renderTownView() -->
+      </div>
+    </div>
+
+    <!-- BATTLE ARENA SCREEN -->
+    <div id="battle-screen">
+      <!-- Arena Visual Stage -->
+      <div class="battle-arena-stage" id="battle-arena">
+        <!-- Player Card -->
+        <div class="combatant-card player">
+          <div class="sprite-stage" id="battle-player-sprite">🛡️</div>
+          <div class="combatant-name" id="battle-player-name-display">Player</div>
+          <div class="combatant-meta">The Brave Adventurer</div>
+          <div class="buff-pill-row" id="battle-player-buffs"></div>
+        </div>
+
+        <!-- Enemy Card -->
+        <div class="combatant-card enemy">
+          <div class="sprite-stage" id="battle-enemy-sprite">👺</div>
+          <div class="combatant-name" id="battle-enemy-name">Monster</div>
+          <div class="combatant-meta">
+            <span id="battle-enemy-level">Lv. 1</span> • <span id="battle-enemy-elem">Physical</span>
+          </div>
+
+          <div class="combat-gauge-wrap">
+            <div class="gauge-row">
+              <span class="gauge-label" style="color:#ff5252">HP</span>
+              <div class="gauge-bar">
+                <div class="gauge-fill hp-fill" id="battle-enemy-hp-fill" style="width: 100%;"></div>
+              </div>
+              <span class="gauge-text" id="battle-enemy-hp-text">50 / 50</span>
+            </div>
+          </div>
+
+          <div class="buff-pill-row" id="battle-enemy-debuffs"></div>
+        </div>
+      </div>
+
+      <!-- Combat Action Controls -->
+      <div class="battle-controls-section" id="battle-action-controls">
+        <!-- Injected dynamically by renderCombatControls() -->
+      </div>
+
+      <!-- Combat Log Stream -->
+      <div class="combat-log-section">
+        <h4>Battle Chronicles</h4>
+        <div class="combat-log-stream" id="combat-log-stream"></div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- AUTH MODAL -->
+<div class="modal-backdrop" id="auth-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>Adventurer Account</h3>
+      <button class="modal-close" onclick="closeAllModals()">&times;</button>
+    </div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab-btn active" id="tab-login">Log In</button>
+      <button class="auth-tab-btn" id="tab-register">Register New</button>
+    </div>
+
+    <div id="auth-error" class="auth-error"></div>
+
+    <!-- Login Form -->
+    <form id="login-form">
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="login-username" class="form-input" required autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="login-password" class="form-input" required autocomplete="current-password">
+      </div>
+      <button type="submit" class="primary-btn" style="width:100%;">Log In & Load Progress</button>
+    </form>
+
+    <!-- Register Form -->
+    <form id="register-form" style="display: none;">
+      <div class="form-group">
+        <label>Choose Hero Name / Username</label>
+        <input type="text" id="reg-username" class="form-input" required autocomplete="username" minlength="3" maxlength="30">
+      </div>
+      <div class="form-group">
+        <label>Password (at least 4 chars)</label>
+        <input type="password" id="reg-password" class="form-input" required autocomplete="new-password" minlength="4">
+      </div>
+      <button type="submit" class="primary-btn" style="width:100%;">Create Account & Play</button>
+    </form>
+
+    <div class="auth-divider">— OR —</div>
+    <button type="button" class="guest-btn" id="guest-play-btn">Play as Guest (Saves in Local Browser)</button>
+  </div>
+</div>
+
+<!-- CHARACTER CREATION MODAL -->
+<div class="modal-backdrop" id="char-create-modal">
+  <div class="modal-box wide">
+    <div class="modal-header">
+      <h3>⚔️ Create Your Champion</h3>
+    </div>
+
+    <form id="char-create-form">
+      <div class="form-group">
+        <label>Character Name</label>
+        <input type="text" id="hero-name-input" class="form-input" placeholder="e.g. Arthur Pendragon" required maxlength="24">
+      </div>
+
+      <div class="form-group">
+        <label>Choose Class Archetype</label>
+        <div class="class-select-grid">
+          <div class="class-select-card selected" data-class="warrior">
+            <div class="class-icon">🛡️</div>
+            <div class="class-name">Warrior</div>
+            <div class="class-passive">+15% Phys Dmg & High HP</div>
+          </div>
+          <div class="class-select-card" data-class="mage">
+            <div class="class-icon">🧙‍♂️</div>
+            <div class="class-name">Mage</div>
+            <div class="class-passive">+25% Spell Dmg & High Mana</div>
+          </div>
+          <div class="class-select-card" data-class="rogue">
+            <div class="class-icon">🗡️</div>
+            <div class="class-name">Rogue</div>
+            <div class="class-passive">+18% Crit Rate & High Evasion</div>
+          </div>
+          <div class="class-select-card" data-class="paladin">
+            <div class="class-icon">⚔️</div>
+            <div class="class-name">Paladin</div>
+            <div class="class-passive">+25% Light Dmg & Holy Smite</div>
+          </div>
+          <div class="class-select-card" data-class="necromancer">
+            <div class="class-icon">💀</div>
+            <div class="class-name">Necromancer</div>
+            <div class="class-passive">+20% Dark Dmg & Life Steal</div>
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" class="primary-btn pulse" style="width:100%;">Enter the Realm of Lore ⚔️</button>
+    </form>
+  </div>
+</div>
+
+<!-- VICTORY MODAL -->
+<div class="modal-backdrop" id="victory-modal">
+  <div class="modal-box">
+    <div class="victory-hero">
+      <div class="vic-icon">🏆</div>
+      <h2 style="font-family:'Press Start 2P', monospace; font-size:16px; color:var(--hud-gold); margin:0 0 6px 0;">VICTORY!</h2>
+      <p style="color:var(--text-dim); margin:0;">You vanquished <strong id="vic-enemy-name" style="color:#fff;">Enemy</strong>!</p>
+      
+      <div class="reward-box">
+        <span style="color:var(--hud-gold);" id="vic-gold">+0 G</span>
+        <span style="color:var(--hud-green);" id="vic-xp">+0 EXP</span>
+      </div>
+
+      <div id="vic-level-notice" style="display:none;">
+        <span class="vic-level-pill">⭐ LEVEL UP! +5 Stat Points ⭐</span>
+      </div>
+
+      <button class="primary-btn pulse" onclick="returnToTownFromBattle()" style="width:100%; margin-top:10px;">Return to Battleon Haven</button>
+    </div>
+  </div>
+</div>
+
+<!-- DEFEAT MODAL -->
+<div class="modal-backdrop" id="defeat-modal">
+  <div class="modal-box">
+    <div class="victory-hero">
+      <div class="vic-icon">☠️</div>
+      <h2 style="font-family:'Press Start 2P', monospace; font-size:16px; color:var(--hud-red); margin:0 0 6px 0;">DEFEATED</h2>
+      <p style="color:var(--text-dim);">You were bested in battle by <strong id="def-enemy-name" style="color:#fff;">Enemy</strong>.</p>
+      <p style="font-size:11px; color:var(--text-dim);">The local monks carry you back to the Haven Inn to recover your wounds.</p>
+      <button class="primary-btn" onclick="returnToTownFromBattle()" style="width:100%; margin-top:10px;">Awaken at the Inn</button>
+    </div>
+  </div>
+</div>
+
+<!-- RULES & GUIDE MODAL -->
+<div class="modal-backdrop" id="rules-modal">
+  <div class="modal-box wide">
+    <div class="modal-header">
+      <h3>📖 Lore & Elemental Guide</h3>
+      <button class="modal-close" onclick="closeAllModals()">&times;</button>
+    </div>
+
+    <div style="font-size:12px; line-height:1.5; color:var(--text-main);">
+      <h4 style="color:var(--hud-gold); margin:0 0 6px 0;">⚡ Turn-Based Combat Rules</h4>
+      <p>AetherQuest is a single-player tactical JRPG inspired by AdventureQuest. On your turn, choose to <strong>Attack</strong> with your equipped weapon, cast powerful <strong>Spells</strong>, use consumable <strong>Potions/Bombs</strong>, or <strong>Swap Gear</strong> in the middle of battle without forfeiting your turn!</p>
+
+      <h4 style="color:var(--hud-green); margin:16px 0 6px 0;">🔥 Elemental Advantage Matrix</h4>
+      <ul style="padding-left: 20px; margin: 0 0 12px 0;">
+        <li>🔥 <strong>Fire:</strong> Incinerates Ice, Nature/Plants, and Undead foes (+50% Dmg). Weak against Water.</li>
+        <li>💧 <strong>Water/Ice:</strong> Douses Fire (+60% Dmg) and can freeze swift enemies. Weak to Lightning.</li>
+        <li>🌿 <strong>Earth:</strong> Grounds and crushes Lightning (+55% Dmg). Weak to Fire.</li>
+        <li>⚡ <strong>Lightning:</strong> Devastates Water and airborne creatures (+60% Dmg). Weak to Earth.</li>
+        <li>✨ <strong>Light:</strong> Annihilates Demons, Undead, and Shadows (+75% Dmg!). Countered by Darkness.</li>
+        <li>🌑 <strong>Darkness:</strong> Corrupts Mortals and Living (+50% Dmg). Weak to Light.</li>
+      </ul>
+
+      <h4 style="color:var(--hud-blue); margin:16px 0 6px 0;">📈 Progression & Scaling</h4>
+      <p>Every level grants increased base stats plus <strong>5 Stat Points</strong> to allocate freely in your Character Sheet (Strength, Dexterity, Intellect, Endurance, Luck). Enemies dynamically scale based on your level and quest tier!</p>
+    </div>
+  </div>
+</div>
+
+<!-- Toast notification banner -->
+<div id="toast-notification" class="toast"></div>
+
+<!-- Scripts -->
+<script src="js/data.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/town.js"></script>
+<script src="js/main.js"></script>
+
+</body>
+</html>
