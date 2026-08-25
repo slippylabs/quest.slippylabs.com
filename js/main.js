@@ -19,11 +19,13 @@ async function bootstrapGame() {
     window.gameEngine.loadPlayerState(savedData);
     showScreen('town');
   } else {
-    // Show character creation / auth
-    if (!isAuthed) {
-      openModal('auth-modal');
-    } else {
+    // Show character creation or auth modal
+    if (isAuthed && window.authManager.user) {
+      const nameInput = document.getElementById('hero-name-input');
+      if (nameInput) nameInput.value = window.authManager.user.username;
       openModal('char-create-modal');
+    } else {
+      openModal('auth-modal');
     }
   }
 
@@ -260,9 +262,13 @@ function updateHeaderUI() {
 
   if (authUserEl) {
     if (window.authManager.user) {
-      authUserEl.innerHTML = `<span class="auth-tag authed">👤 ${window.authManager.user.username}</span>`;
+      if (window.authManager.isSso) {
+        authUserEl.innerHTML = `<a href="https://admin.slippylabs.com/account" class="auth-tag authed" target="_blank" title="Manage your central Slippylabs account">👤 ${window.authManager.user.username} [SSO]</a>`;
+      } else {
+        authUserEl.innerHTML = `<span class="auth-tag authed">👤 ${window.authManager.user.username}</span>`;
+      }
     } else {
-      authUserEl.innerHTML = `<span class="auth-tag guest">👤 Guest [Login]</span>`;
+      authUserEl.innerHTML = `<span class="auth-tag guest" onclick="openModal('auth-modal')" style="cursor:pointer;">👤 Guest [Login]</span>`;
     }
   }
 }

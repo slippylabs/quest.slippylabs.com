@@ -1,41 +1,65 @@
 // ============================================================================
-// AetherQuest - Authentication & Cloud Save Manager
+// AetherQuest - Authentication & Unified Cloud Save Manager
+// Integrated with Slippylabs SSO (admin.slippylabs.com) & Local Auth
 // ============================================================================
 
 class AuthManager {
   constructor() {
     this.token = localStorage.getItem('aetherquest_token') || null;
     this.user = JSON.parse(localStorage.getItem('aetherquest_user') || 'null');
+    this.isSso = false;
     this.isGuest = !this.token;
     this.lastSavedAt = null;
     this.isSaving = false;
   }
 
   async checkAuth() {
-    if (!this.token) {
-      this.isGuest = true;
-      this.user = null;
-      return false;
+    // 1. Check Slippylabs Central SSO first (admin.slippylabs.com)
+    if (window.LabAccount) {
+      try {
+        const ssoUser = await window.LabAccount.getUser();
+        if (ssoUser && ssoUser.authenticated && ssoUser.username) {
+          this.user = {
+            id: ssoUser.username,
+            username: ssoUser.username,
+            is_admin: ssoUser.is_admin
+          };
+          this.isSso = true;
+          this.isGuest = false;
+          localStorage.setItem('aetherquest_user', JSON.stringify(this.user));
+          return true;
+        }
+      } catch (e) {
+        console.warn('SSO check error', e);
+      }
     }
 
-    try {
-      const res = await fetch('/api/me', {
-        headers: { 'Authorization': `Bearer ${this.token}` }
-      });
-      const data = await res.json();
-      if (data.ok && data.user) {
-        this.user = data.user;
-        this.isGuest = false;
-        localStorage.setItem('aetherquest_user', JSON.stringify(this.user));
-        return true;
-      } else {
-        this.logout(false);
-        return false;
+    // 2. Check local token if not SSO
+    if (this.token) {
+      try {
+        const res = await fetch('/api/me', {
+          headers: { 'Authorization': `Bearer ${this.token}` }
+        });
+        const data = await res.json();
+        if (data.ok && data.user) {
+          this.user = data.user;
+          this.isSso = false;
+          this.isGuest = false;
+          localStorage.setItem('aetherquest_user', JSON.stringify(this.user));
+          return true;
+        }
+      } catch (e) {
+        // Local offline fallback
+        if (this.user) {
+          this.isGuest = false;
+          return true;
+        }
       }
-    } catch (e) {
-      // Offline fallback
-      return !!this.user;
     }
+
+    this.isGuest = true;
+    this.user = null;
+    return false;
   }
 
   async register(username, password) {
@@ -52,6 +76,7 @@ class AuthManager {
 
       this.token = data.token;
       this.user = data.user;
+      this.isSso = false;
       this.isGuest = false;
       localStorage.setItem('aetherquest_token', this.token);
       localStorage.setItem('aetherquest_user', JSON.stringify(this.user));
@@ -75,6 +100,7 @@ class AuthManager {
 
       this.token = data.token;
       this.user = data.user;
+      this.isSso = false;
       this.isGuest = false;
       localStorage.setItem('aetherquest_token', this.token);
       localStorage.setItem('aetherquest_user', JSON.stringify(this.user));
@@ -84,8 +110,13 @@ class AuthManager {
     }
   }
 
-  async logout(callBackend = true) {
-    if (callBackend && this.token) {
+  async logout() {
+    if (this.isSso && window.LabAccount) {
+      window.LabAccount.logout();
+      return;
+    }
+
+    if (this.token) {
       try {
         await fetch('/api/logout', {
           method: 'POST',
@@ -95,6 +126,7 @@ class AuthManager {
     }
     this.token = null;
     this.user = null;
+    this.isSso = false;
     this.isGuest = true;
     localStorage.removeItem('aetherquest_token');
     localStorage.removeItem('aetherquest_user');
@@ -107,6 +139,22 @@ class AuthManager {
     // Always persist locally
     localStorage.setItem('aetherquest_local_save', JSON.stringify(saveData));
 
+    // 1. If authenticated via Slippylabs SSO, save to Central Admin Game Saves API
+    if (this.isSso && window.LabAccount) {
+      try {
+        const res = await window.LabAccount.saveGameData('quest', saveData);
+        if (res && res.ok) {
+          this.lastSavedAt = new Date();
+          this.updateSaveUI('Cloud Synced ✓ (Slippylabs Account)');
+          this.isSaving = false;
+          return;
+        }
+      } catch (e) {
+        console.warn('SSO cloud save error', e);
+      }
+    }
+
+    // 2. If authenticated via local backend token
     if (this.token && !this.isGuest) {
       try {
         const res = await fetch('/api/save', {
@@ -121,8 +169,8 @@ class AuthManager {
         if (data.ok) {
           this.lastSavedAt = new Date();
           this.updateSaveUI('Cloud Saved ✓');
-        } else {
-          this.updateSaveUI('Saved Locally (Cloud sync err)');
+          this.isSaving = false;
+          return;
         }
       } catch (e) {
         this.updateSaveUI('Saved Locally (Offline)');
@@ -134,6 +182,20 @@ class AuthManager {
   }
 
   async loadGame() {
+    // 1. If logged into Slippylabs SSO, load from central cloud save
+    if (this.isSso && window.LabAccount) {
+      try {
+        const cloudSave = await window.LabAccount.loadGameSave('quest');
+        if (cloudSave) {
+          localStorage.setItem('aetherquest_local_save', JSON.stringify(cloudSave));
+          return cloudSave;
+        }
+      } catch (e) {
+        console.warn('Failed to load from central SSO cloud save', e);
+      }
+    }
+
+    // 2. If logged in with local quest-backend token
     if (this.token && !this.isGuest) {
       try {
         const res = await fetch('/api/save', {
@@ -141,16 +203,13 @@ class AuthManager {
         });
         const data = await res.json();
         if (data.ok && data.save_data) {
-          // Sync local storage as well
           localStorage.setItem('aetherquest_local_save', JSON.stringify(data.save_data));
           return data.save_data;
         }
-      } catch (e) {
-        console.warn('Failed to load from cloud, fallback to local', e);
-      }
+      } catch (e) {}
     }
 
-    // Fallback to local save
+    // 3. Fallback to local browser save
     const local = localStorage.getItem('aetherquest_local_save');
     if (local) {
       try {

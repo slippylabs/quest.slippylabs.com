@@ -188,6 +188,15 @@
       <button class="modal-close" onclick="closeAllModals()">&times;</button>
     </div>
 
+    <div style="margin-bottom:16px;">
+      <a href="https://admin.slippylabs.com/login?next=https%3A%2F%2Fquest.slippylabs.com%2F" class="primary-btn pulse" style="display:block; text-align:center; text-decoration:none; margin-bottom:8px; padding:12px;">
+        🔐 Sign In with Slippylabs Account
+      </a>
+      <p style="font-size:10px; color:var(--text-dim); text-align:center; margin:0;">Automatic zero-prompt login & cloud saves across all devices</p>
+    </div>
+
+    <div class="auth-divider">— OR USE DIRECT QUEST ACCOUNT —</div>
+
     <div class="auth-tabs">
       <button class="auth-tab-btn active" id="tab-login">Log In</button>
       <button class="auth-tab-btn" id="tab-register">Register New</button>
@@ -342,12 +351,15 @@
 <div id="toast-notification" class="toast"></div>
 
 <!-- Scripts -->
+<!-- One shared account client, served from the Lab. A local copy here drifted
+     from the canonical file; do not reintroduce one. -->
+<script src="https://lab.slippylabs.com/lab-account.js?v=3"></script>
 <script src="js/data.js"></script>
 <script src="js/audio.js"></script>
-<script src="js/auth.js"></script>
+<script src="js/auth.js?v=2"></script>
 <script src="js/engine.js"></script>
 <script src="js/town.js"></script>
-<script src="js/main.js"></script>
+<script src="js/main.js?v=2"></script>
 
 </body>
 </html>
