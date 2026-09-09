@@ -711,12 +711,20 @@ function renderCombatUI() {
   const enemyDebuffs = document.getElementById('battle-enemy-debuffs');
 
   const playerSprite = document.getElementById('battle-player-sprite');
+  const playerName = document.getElementById('battle-player-name-display');
+  const playerMeta = document.getElementById('battle-player-meta');
   const playerBuffs = document.getElementById('battle-player-buffs');
 
   if (enemyName) enemyName.textContent = enemy.name;
   if (enemyLevel) enemyLevel.textContent = `Lv. ${enemy.level} ${enemy.isBoss ? '👑 BOSS' : ''}`;
   if (enemySprite) enemySprite.textContent = enemy.icon;
   if (playerSprite) playerSprite.textContent = CLASSES[p.classId].icon;
+  // The enemy card has always named itself and the player card never did: the
+  // arena read "Player / The Brave Adventurer" whatever you called your hero
+  // and whichever class you picked, while the sprite beside it was already
+  // class-specific. Mirrors the enemy's level/element line.
+  if (playerName) playerName.textContent = p.name;
+  if (playerMeta) playerMeta.innerHTML = `Lv. ${p.level} • ${CLASSES[p.classId].icon} ${CLASSES[p.classId].name}`;
 
   const enemyHpPct = Math.max(0, Math.min(100, Math.round((enemy.currentHp / enemy.maxHp) * 100)));
   if (enemyHpText) enemyHpText.textContent = `${enemy.currentHp} / ${enemy.maxHp}`;
