@@ -1129,3 +1129,37 @@ body {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* ---- 44px phone touch targets ----------------------------------------------
+   The sitewide minimum tap target, applied here on 2026-09-10. AetherQuest
+   shipped after the 2026-08-21 rollout that covered the other game subdomains,
+   so it never received this block: measured at a 390px viewport its chrome was
+   rendering well under the minimum -- .modal-close at 25px, .logout-link at
+   26px, the four .nav-btn chips at 27px and the seven .town-nav-btn tabs at
+   33px, all of them primary navigation rather than incidental links.
+
+   Anchors need the display switch as well as the height: min-height does
+   nothing to a non-replaced inline box, so .logout-link would keep its 26px
+   line box no matter what is declared here. */
+@media (max-width: 560px) {
+  .nav-btn,
+  .town-nav-btn,
+  .primary-btn,
+  .guest-btn,
+  .auth-tab-btn,
+  .form-input { min-height: 44px; }
+
+  /* Square glyph button -- it needs the width as much as the height. */
+  .modal-close {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .logout-link,
+  .home-link,
+  a.primary-btn {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+}
