@@ -1130,6 +1130,28 @@ body {
   }
 }
 
+
+/* ---- perf-lite -------------------------------------------------------------
+   Toggled on <html> by the inline perf-lite snippet (low-power devices) or by
+   the user's "reduce effects" preference. The starfield itself stays: it is a
+   compositor transform now and costs essentially nothing. What this drops are
+   the two effects that force full-viewport work every frame -- mix-blend-mode
+   compositing and backdrop-filter blur.
+
+   This site shipped the inline bootstrap from the start but never this block,
+   so on a low-power device it has been setting class="perf-lite" on <html>
+   and then dropping nothing. */
+.perf-lite { --bg-panel: rgba(12, 26, 22, 0.95); }
+/* No .scanlines rule here: this sheet's scanlines carry no mix-blend-mode, so
+   there is nothing to neutralise -- unlike the other sheets in this family. */
+.perf-lite .starfield { animation: none; }
+.perf-lite *,
+.perf-lite *::before,
+.perf-lite *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
 /* ---- 44px phone touch targets ----------------------------------------------
    The sitewide minimum tap target, applied here on 2026-09-10. AetherQuest
    shipped after the 2026-08-21 rollout that covered the other game subdomains,
