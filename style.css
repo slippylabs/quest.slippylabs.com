@@ -236,6 +236,13 @@ body {
   border-radius: 10px;
   animation: pulse-glow 1.5s infinite;
 }
+/* The rule this animation names was missing, so the pill never pulsed. Same
+   expanding-ring shape as btn-pulse above, in the pill's own orange. */
+@keyframes pulse-glow {
+  0% { box-shadow: 0 0 0 0 rgba(255, 145, 48, 0.55); }
+  70% { box-shadow: 0 0 0 8px rgba(255, 145, 48, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 145, 48, 0); }
+}
 
 .hud-gauges {
   display: flex;
@@ -595,6 +602,16 @@ body {
   font-size: 10px;
   color: var(--text-dim);
   margin-top: 6px;
+}
+/* js/auth.js's updateSaveUI() adds .flash for a second whenever a save lands.
+   No rule existed for it, so the confirmation was invisible -- only the label
+   text changed. Fades back to the dim resting colour on its own. */
+.flash {
+  animation: save-flash 1s ease-out;
+}
+@keyframes save-flash {
+  0% { color: var(--hud-green); text-shadow: 0 0 8px rgba(57, 255, 143, 0.85); }
+  100% { color: var(--text-dim); text-shadow: none; }
 }
 
 .equipped-box {
