@@ -1202,3 +1202,29 @@ body {
     align-items: center;
   }
 }
+
+/* ---- phone polish (2026-10-17 mobile audit) --------------------------------
+   iOS Safari zooms the whole page in when a focused field's text is under
+   16px, and does not zoom back out. Touch screens get 16px fields. */
+@media (hover: none) and (pointer: coarse) {
+  input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]):not([type=button]):not([type=submit]),
+  select, textarea { font-size: 16px; }
+  /* Single-class rules (.field-input and friends) out-rank a bare element
+     selector; [class] lifts these above them. */
+  select[class], textarea[class],
+  input[class]:not([type=checkbox]):not([type=radio]):not([type=range]) { font-size: 16px; }
+}
+
+/* A phone held sideways is ~780px wide, so the 560px touch-target block
+   above never reaches it and every control drops back to its mouse size.
+   Short touch screens get the same thumb sizes; the layout rules of that
+   block (wrapping, stacked rows) stay portrait. (2026-10-17 mobile audit) */
+@media (hover: none) and (pointer: coarse) and (max-height: 500px) {
+  .login-btn, .logout-link, .home-link, .rules-link, .back-home-link {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .nav-btn, .town-nav-btn, .primary-btn, .guest-btn, .auth-tab-btn, .form-input { min-height: 44px; }
+  .modal-close { min-width: 44px; min-height: 44px; }
+}
