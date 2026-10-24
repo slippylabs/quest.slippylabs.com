@@ -164,6 +164,9 @@ export function createSfx({ context = null, storageKey = 'slipkit.muted', volume
     } else {
       const src = ctx.createBufferSource();
       src.buffer = L.soft ? soft : white;
+      // Looped: a take starts up to 1.5 s into the 2 s buffer, so a long
+      // layer would otherwise stop dead where the buffer ends.
+      src.loop = true;
       const f = ctx.createBiquadFilter();
       f.type = L.filter || 'bandpass'; f.Q.value = L.q;
       f.frequency.setValueAtTime(L.f, t);
