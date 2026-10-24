@@ -37,20 +37,20 @@ function initUI() {
   // Sound and Music buttons
   const soundBtn = document.getElementById('sound-btn');
   if (soundBtn) {
-    soundBtn.textContent = window.soundEngine.enabled ? '🔊 Sound: ON' : '🔈 Sound: OFF';
+    soundBtn.textContent = window.soundEngine.soundLabel();
     soundBtn.addEventListener('click', () => {
-      const state = window.soundEngine.toggleSound();
-      soundBtn.textContent = state ? '🔊 Sound: ON' : '🔈 Sound: OFF';
+      window.soundEngine.toggleSound();
+      soundBtn.textContent = window.soundEngine.soundLabel();
       window.soundEngine.click();
     });
   }
 
   const musicBtn = document.getElementById('music-btn');
   if (musicBtn) {
-    musicBtn.textContent = window.soundEngine.musicEnabled ? '🎵 Music: ON' : '🔇 Music: OFF';
+    musicBtn.textContent = window.soundEngine.musicLabel();
     musicBtn.addEventListener('click', () => {
-      const state = window.soundEngine.toggleMusic();
-      musicBtn.textContent = state ? '🎵 Music: ON' : '🔇 Music: OFF';
+      window.soundEngine.toggleMusic();
+      musicBtn.textContent = window.soundEngine.musicLabel();
       window.soundEngine.click();
     });
   }
@@ -206,11 +206,13 @@ function showScreen(screen) {
   if (screen === 'town') {
     if (townEl) townEl.style.display = 'block';
     if (battleEl) battleEl.style.display = 'none';
+    window.soundEngine.scene('town');
     renderTownView();
   } else if (screen === 'battle') {
     if (townEl) townEl.style.display = 'none';
     if (battleEl) battleEl.style.display = 'block';
     activeCombatSubmenu = 'main';
+    window.soundEngine.scene('battle', window.gameEngine.currentZone && window.gameEngine.currentZone.id);
     renderCombatUI();
   }
   updateHeaderUI();
@@ -725,6 +727,9 @@ function renderCombatUI() {
   // class-specific. Mirrors the enemy's level/element line.
   if (playerName) playerName.textContent = p.name;
   if (playerMeta) playerMeta.innerHTML = `Lv. ${p.level} • ${CLASSES[p.classId].icon} ${CLASSES[p.classId].name}`;
+  // the music follows the fight: your HP, the gauntlet's wave, a boss
+  const ge = window.gameEngine;
+  window.soundEngine.battleUpdate(p, enemy, { wave: ge.gauntletWave, gauntlet: ge.isGauntlet, over: !ge.inBattle });
 
   const enemyHpPct = Math.max(0, Math.min(100, Math.round((enemy.currentHp / enemy.maxHp) * 100)));
   if (enemyHpText) enemyHpText.textContent = `${enemy.currentHp} / ${enemy.maxHp}`;
@@ -946,10 +951,13 @@ function openModal(id) {
   if (modal) {
     modal.classList.add('open');
   }
+  // a dialog over a hero's game muffles the music (not the battle results: their stinger is the point)
+  if ((id === 'rules-modal' || id === 'auth-modal') && window.gameEngine.player) window.soundEngine.setMuffled(true);
 }
 
 function closeAllModals() {
   document.querySelectorAll('.modal-backdrop').forEach(m => m.classList.remove('open'));
+  window.soundEngine.setMuffled(false);
 }
 
 // Toast Notifications

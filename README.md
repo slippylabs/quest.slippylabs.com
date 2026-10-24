@@ -22,6 +22,17 @@ python3 -m http.server 8000
 
 Then open <http://localhost:8000>.
 
+## Sound
+
+Music and sound effects are SlipKit's (vendored in `js/vendor/slipkit/1.23.0/`, loaded from the plain
+`js/audio.js` with a dynamic `import()`): a composed RPG Adventure song for the title, the town and each
+quest region, intensity following the fight, stingers on a boss, a win, a level up and a defeat. M mutes.
+
+## Tools / tests
+
+- `tools/audio_check.py [--url https://quest.slippylabs.com/]` -- the music and sound, in headless Chromium
+  (songs per place, intensity, varied takes, stingers, muffle, M).
+
 ## Notes
 
 Front end only — the backend is the separate **quest-dev** repo (`quest-backend.service`, port 8026).

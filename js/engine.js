@@ -144,7 +144,7 @@ class GameEngine {
       this.log(`💡 Scout Report: Vulnerable to **${weakElem ? weakElem.name : this.currentEnemy.weakness}**!`, 'info');
     }
 
-    window.soundEngine.playTone(300, 'triangle', 0.2, 0.15, 100);
+    window.soundEngine.encounter(this.currentEnemy.isBoss);
     return this.currentEnemy;
   }
 
