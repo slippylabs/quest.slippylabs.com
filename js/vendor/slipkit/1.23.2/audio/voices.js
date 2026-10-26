@@ -19,7 +19,7 @@
 import { INSTRUMENTS } from '../core/music/instruments.js';
 import { LEVELS } from '../core/music/levels.js';
 import { createInstrument } from './instruments.js';
-import { makeRng } from './util.js';
+import { makeRng, releaseWhenDone } from './util.js';
 
 const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
 const clampF = (f) => Math.max(30, Math.min(18000, f));
@@ -137,6 +137,7 @@ function synthVoice(ctx, spec) {
       g.connect(output);
       for (const s of srcs) { s.start(when, s.buffer ? (m * 0.0137) % 1 : undefined); s.stop(end); }
       live.push({ g, srcs, end });
+      releaseWhenDone(srcs, g);
       return end;
     },
   };
@@ -166,6 +167,7 @@ function fmVoice(ctx, spec) {
       car.connect(g); g.connect(output);
       car.start(when); mod.start(when); car.stop(end); mod.stop(end);
       live.push({ g, srcs: [car, mod], end });
+      releaseWhenDone([car, mod], g);
       return end;
     },
   };
@@ -219,6 +221,7 @@ function pluckVoice(ctx, spec) {
       src.connect(g); g.connect(output);
       src.start(when); src.stop(end);
       live.push({ g, srcs: [src], end });
+      releaseWhenDone([src], g);
       return end;
     },
   };

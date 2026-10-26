@@ -40,6 +40,7 @@
 import { SFX_PRESETS, SFX_VOICES, resolveLayers, voiceSilence, variantCount, THEMES } from '../core/sfx.js';
 import { renderSfxr, decodeSfxr, generateSfxr } from '../core/sfxr.js';
 import { createReverbImpulse } from './effects.js';
+import { releaseWhenDone } from './util.js';
 
 const VOLUME = 0.8;
 
@@ -138,7 +139,7 @@ export function createSfx({ context = null, storageKey = 'slipkit.muted', volume
     return buf;
   }
 
-  function layer(L, dest, t0) {
+  function layer(L, dest, t0, srcs) {
     const t = t0 + L.delay;
     const g = ctx.createGain();
     if (L.t === 'sfxr') {
@@ -147,6 +148,7 @@ export function createSfx({ context = null, storageKey = 'slipkit.muted', volume
       src.playbackRate.value = L.rate || 1;
       g.gain.value = L.gain;
       src.connect(g); g.connect(dest);
+      srcs.push(src);
       src.start(t);
       return t + src.buffer.duration / (L.rate || 1);
     }
@@ -159,6 +161,7 @@ export function createSfx({ context = null, storageKey = 'slipkit.muted', volume
       g.gain.exponentialRampToValueAtTime(Math.max(0.0002, L.gain), t + L.attack);
       g.gain.exponentialRampToValueAtTime(0.0001, t + L.dur);
       o.connect(g); g.connect(dest);
+      srcs.push(o);
       o.start(t); o.stop(t + L.dur + 0.03);
       return t + L.dur + 0.03;
     } else {
@@ -175,6 +178,7 @@ export function createSfx({ context = null, storageKey = 'slipkit.muted', volume
       g.gain.linearRampToValueAtTime(L.gain, t + L.attack);
       g.gain.exponentialRampToValueAtTime(0.0001, t + L.dur);
       src.connect(f); f.connect(g); g.connect(dest);
+      srcs.push(src);
       // Where in the noise it starts: fixed in v1 (the same hiss every time),
       // the take's own offset in v2.
       src.start(t, ((L.f * 7.31 + L.delay * 13) + (L.offset || 0)) % 1.5, L.dur + 0.05);
@@ -221,10 +225,14 @@ export function createSfx({ context = null, storageKey = 'slipkit.muted', volume
       const varied = opts.vary ?? vary;
       const variant = opts.variant ?? (varied ? take(name) : null);
       const pg = ctx.createGain();
-      pg.connect(out(opts.pos));
+      const o = out(opts.pos);
+      pg.connect(o);
       if (reverbIn) pg.connect(reverbIn);
       let end = t0;
-      for (const L of resolveLayers(name, { ...opts, variant, jitter: varied ? rng : null, theme: th, presets })) end = Math.max(end, layer(L, pg, t0));
+      const srcs = [];
+      for (const L of resolveLayers(name, { ...opts, variant, jitter: varied ? rng : null, theme: th, presets })) end = Math.max(end, layer(L, pg, t0, srcs));
+      // The play's gain (and its own panner) leave the graph when its last layer ends.
+      releaseWhenDone(srcs, pg, ...(o === master ? [] : [o]));
       active.push({ name, g: pg, end });
       played[name] = (played[name] || 0) + 1;
       lastPlayed = { name, variant };

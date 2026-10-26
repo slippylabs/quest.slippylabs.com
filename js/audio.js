@@ -1,5 +1,5 @@
 // ============================================================================
-// AetherQuest - Sound: SlipKit's audio (js/vendor/slipkit/1.23.1, vendored with
+// AetherQuest - Sound: SlipKit's audio (js/vendor/slipkit/1.23.2, vendored with
 // `tools/kitcopy.sh . --audio` from SlipStudio).
 //
 // This page is plain scripts, not modules, so the kit's three ES modules are
@@ -24,7 +24,7 @@
 // ============================================================================
 
 (function () {
-  const KIT = new URL('vendor/slipkit/1.23.1/audio/', document.currentScript.src).href;
+  const KIT = new URL('vendor/slipkit/1.23.2/audio/', document.currentScript.src).href;
 
   const T = (wave, f, to, dur, gain, extra = {}) => ({ t: 'tone', wave, f, ...(to == null ? {} : { to }), dur, gain, ...extra });
   const N = (filter, f, dur, gain, extra = {}) => ({ t: 'noise', filter, f, dur, gain, q: 1, ...extra });

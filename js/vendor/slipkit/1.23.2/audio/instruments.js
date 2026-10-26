@@ -20,7 +20,7 @@
 // ctx.currentTime to decide *when* a note happens — the scheduler owns that.
 // ============================================================
 
-import { midiToFreq, makeRng, createNoiseBuffer, clamp } from './util.js';
+import { midiToFreq, makeRng, createNoiseBuffer, clamp, releaseWhenDone } from './util.js';
 
 // Held voices are capped per instrument. Without a cap, a stuck MIDI note or
 // a dense pattern climbs until the audio thread gives up; with it, the
@@ -165,6 +165,7 @@ function createAnalog(ctx, params = {}) {
       lfo.start(when);
     }
 
+    releaseWhenDone(lfo ? [...oscs, lfo] : oscs, gain);
     return { pitch, gain, oscs, lfo, release: (preset.releaseMs ?? 250) / 1000 };
   }
 
@@ -282,6 +283,7 @@ function createFM(ctx, params = {}) {
 
       carrier.connect(gain); gain.connect(output);
       carrier.start(when); mod.start(when);
+      releaseWhenDone([carrier, mod], gain);
 
       const v = { carrier, mod, gain };
       voices.set(pitch, v); order.push(pitch);
@@ -361,6 +363,7 @@ function createPluck(ctx, params = {}) {
       g.gain.setValueAtTime(Math.max(0.0001, (vel / 127) * 0.9), when);
       src.connect(g); g.connect(output);
       src.start(when);
+      releaseWhenDone([src], g);
       const v = { src, gain: g };
       active.set(pitch, v);
       return v;
@@ -636,6 +639,7 @@ function createDrumKit(ctx, params = {}) {
     g.gain.setValueAtTime(Math.max(0.0001, amp), time);
     src.connect(g); g.connect(output);
     src.start(time);
+    releaseWhenDone([src], g);
   }
 
   const V = {
@@ -652,6 +656,7 @@ function createDrumKit(ctx, params = {}) {
       pg.gain.exponentialRampToValueAtTime(0.001, time + K.punchDecay);
       punch.connect(shaper); shaper.connect(pg); pg.connect(output);
       punch.start(time); punch.stop(time + K.punchDecay + 0.02);
+      releaseWhenDone([punch], pg);
 
       const sub = ctx.createOscillator();
       sub.type = 'sine';
@@ -663,6 +668,7 @@ function createDrumKit(ctx, params = {}) {
       sg.gain.exponentialRampToValueAtTime(0.001, time + K.subDecay);
       sub.connect(sg); sg.connect(output);
       sub.start(time); sub.stop(time + K.subDecay + 0.02);
+      releaseWhenDone([sub], sg);
 
       const click = noiseSource();
       const bp = ctx.createBiquadFilter();
@@ -672,6 +678,7 @@ function createDrumKit(ctx, params = {}) {
       cg.gain.exponentialRampToValueAtTime(0.001, time + K.clickDecay);
       click.connect(bp); bp.connect(cg); cg.connect(output);
       click.start(time); click.stop(time + K.clickDecay + 0.01);
+      releaseWhenDone([click], cg);
     },
     snare(time, amp) {
       const K = kitSpec().snare;
@@ -684,6 +691,7 @@ function createDrumKit(ctx, params = {}) {
       bg.gain.exponentialRampToValueAtTime(0.001, time + K.bodyDecay);
       body.connect(bg); bg.connect(output);
       body.start(time); body.stop(time + K.bodyDecay + 0.02);
+      releaseWhenDone([body], bg);
 
       const snap = noiseSource();
       const sbp = ctx.createBiquadFilter();
@@ -693,6 +701,7 @@ function createDrumKit(ctx, params = {}) {
       sg.gain.exponentialRampToValueAtTime(0.001, time + K.snapDecay);
       snap.connect(sbp); sbp.connect(sg); sg.connect(output);
       snap.start(time); snap.stop(time + K.snapDecay + 0.02);
+      releaseWhenDone([snap], sg);
 
       const tail = noiseSource();
       const hp = ctx.createBiquadFilter();
@@ -702,6 +711,7 @@ function createDrumKit(ctx, params = {}) {
       tg.gain.exponentialRampToValueAtTime(0.001, time + K.tailDecay);
       tail.connect(hp); hp.connect(tg); tg.connect(output);
       tail.start(time); tail.stop(time + K.tailDecay + 0.02);
+      releaseWhenDone([tail], tg);
     },
     clap(time, amp) {
       const K = kitSpec().clap;
@@ -715,6 +725,7 @@ function createDrumKit(ctx, params = {}) {
         g.gain.exponentialRampToValueAtTime(0.001, t + K.decay);
         n.connect(bp); bp.connect(g); g.connect(output);
         n.start(t); n.stop(t + K.decay + 0.01);
+        releaseWhenDone([n], g);
       });
       const tt = time + K.tailOffset;
       const tn = noiseSource();
@@ -725,6 +736,7 @@ function createDrumKit(ctx, params = {}) {
       tg.gain.exponentialRampToValueAtTime(0.001, tt + K.tailDecay);
       tn.connect(bp2); bp2.connect(tg); tg.connect(output);
       tn.start(tt); tn.stop(tt + K.tailDecay + 0.02);
+      releaseWhenDone([tn], tg);
     },
     chat(time, amp) {
       const K = kitSpec().chat;
@@ -737,6 +749,7 @@ function createDrumKit(ctx, params = {}) {
       g.gain.exponentialRampToValueAtTime(0.001, time + K.decay);
       n.connect(hp); hp.connect(g); g.connect(output);
       n.start(time); n.stop(time + K.decay + 0.015);
+      releaseWhenDone([n], g);
     },
     ohat(time, amp) {
       const K = kitSpec().ohat;
@@ -749,6 +762,7 @@ function createDrumKit(ctx, params = {}) {
       g.gain.exponentialRampToValueAtTime(0.001, time + K.decay);
       n.connect(hp); hp.connect(g); g.connect(output);
       n.start(time); n.stop(time + K.decay + 0.02);
+      releaseWhenDone([n], g);
       openHatVoice = { gain: g.gain };
     },
     ride(time, amp) {
@@ -760,8 +774,10 @@ function createDrumKit(ctx, params = {}) {
       const hp = ctx.createBiquadFilter();
       hp.type = 'highpass'; hp.frequency.value = K.hp;
       hp.connect(bus); bus.connect(output);
+      const srcs = [];
       K.partials.forEach((f) => {
         const osc = ctx.createOscillator();
+        srcs.push(osc);
         osc.type = 'square'; osc.frequency.value = f;
         const og = ctx.createGain(); og.gain.value = K.partialGain;
         osc.connect(og); og.connect(hp);
@@ -770,6 +786,7 @@ function createDrumKit(ctx, params = {}) {
       const n = noiseSource();
       n.connect(hp);
       n.start(time); n.stop(time + K.decay + 0.05);
+      releaseWhenDone([...srcs, n], bus);
     },
     perc(time, amp) {
       const K = kitSpec().perc;
@@ -782,6 +799,7 @@ function createDrumKit(ctx, params = {}) {
       og.gain.exponentialRampToValueAtTime(0.001, time + K.decay);
       osc.connect(og); og.connect(output);
       osc.start(time); osc.stop(time + K.decay + 0.02);
+      releaseWhenDone([osc], og);
 
       const n = noiseSource();
       const bp = ctx.createBiquadFilter();
@@ -791,6 +809,7 @@ function createDrumKit(ctx, params = {}) {
       ng.gain.exponentialRampToValueAtTime(0.001, time + K.noiseDecay);
       n.connect(bp); bp.connect(ng); ng.connect(output);
       n.start(time); n.stop(time + K.noiseDecay + 0.01);
+      releaseWhenDone([n], ng);
     },
     // The 808 is a bass instrument, not a fixed drum hit: it follows pitch,
     // so you can write a bassline with it the way trap producers actually do.
@@ -808,6 +827,7 @@ function createDrumKit(ctx, params = {}) {
       g.gain.exponentialRampToValueAtTime(0.001, time + K.decay);
       osc.connect(shaper); shaper.connect(g); g.connect(output);
       osc.start(time); osc.stop(time + K.decay + 0.03);
+      releaseWhenDone([osc], g);
     },
   };
 
@@ -872,6 +892,7 @@ function createSampler(ctx, params = {}) {
       g.gain.linearRampToValueAtTime(peak, when + Math.max(0.001, p.attackMs / 1000));
       src.connect(g); g.connect(output);
       src.start(when, clamp(p.start, 0, Math.max(0, p.buffer.duration - 0.01)));
+      releaseWhenDone([src], g);
       const v = { src, gain: g };
       active.set(pitch, v);
       return v;
