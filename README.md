@@ -24,14 +24,15 @@ Then open <http://localhost:8000>.
 
 ## Sound
 
-Music and sound effects are SlipKit's (vendored in `js/vendor/slipkit/1.23.2/`, loaded from the plain
+Music and sound effects are SlipKit's (vendored in `js/vendor/slipkit/1.23.5/`, loaded from the plain
 `js/audio.js` with a dynamic `import()`): a composed RPG Adventure song for the title, the town and each
 quest region, intensity following the fight, stingers on a boss, a win, a level up and a defeat. M mutes.
 
 ## Tools / tests
 
 - `tools/audio_check.py [--url https://quest.slippylabs.com/]` -- the music and sound, in headless Chromium
-  (songs per place, intensity, varied takes, stingers, muffle, M).
+  (songs per place, intensity, varied takes, stingers, muffle, M, the music fading in to a quiet 0.3,
+  the Music on/off button).
 
 ## Notes
 

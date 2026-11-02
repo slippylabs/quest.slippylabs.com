@@ -1,5 +1,5 @@
 // ============================================================================
-// AetherQuest - Sound: SlipKit's audio (js/vendor/slipkit/1.23.2, vendored with
+// AetherQuest - Sound: SlipKit's audio (js/vendor/slipkit/1.23.5, vendored with
 // `tools/kitcopy.sh . --audio` from SlipStudio).
 //
 // This page is plain scripts, not modules, so the kit's three ES modules are
@@ -18,13 +18,16 @@
 //   * every SOUND is the game's own design as a preset (the table below, in
 //     SlipKit's format) played through the kit's sfx player with the 'fantasy'
 //     theme: each play is one of 3-5 takes, never the same take twice running.
-//   * Sound OFF / M mutes everything (the mixer's master); Music OFF stops the
-//     music. Both persist under the same localStorage keys as before. A rules
+//   * Sound OFF / M mutes everything (the mixer's master); Music off silences
+//     the music bus (kit 1.23.5 setMusicOn) and stops the song, effects keep
+//     playing. Both persist under the same localStorage keys as before. A rules
 //     or account dialog over the game muffles the music.
+//   * The music fades in from silence at the kit's quiet default (0.3 on the
+//     music bus; this file used to force 0.8, which was far too loud).
 // ============================================================================
 
 (function () {
-  const KIT = new URL('vendor/slipkit/1.23.2/audio/', document.currentScript.src).href;
+  const KIT = new URL('vendor/slipkit/1.23.5/audio/', document.currentScript.src).href;
 
   const T = (wave, f, to, dur, gain, extra = {}) => ({ t: 'tone', wave, f, ...(to == null ? {} : { to }), dur, gain, ...extra });
   const N = (filter, f, dur, gain, extra = {}) => ({ t: 'noise', filter, f, dur, gain, q: 1, ...extra });
@@ -81,7 +84,7 @@
     get currentScene() { return wanted.scene; },
 
     soundLabel() { return this.enabled ? '🔊 Sound: ON' : '🔈 Sound: OFF'; },
-    musicLabel() { return this.musicEnabled ? '🎵 Music: ON' : '🔇 Music: OFF'; },
+    musicLabel() { return this.musicEnabled ? '\u266A Music: on' : '\u266A Music: off'; },
 
     initContext() { unlock(); },
 
@@ -97,9 +100,13 @@
     toggleMusic() {
       this.musicEnabled = !this.musicEnabled;
       localStorage.setItem('aetherquest_music', this.musicEnabled ? 'true' : 'false');
+      if (kit) kit.mixer.setMusicOn(this.musicEnabled);
       if (this.musicEnabled) startWanted(); else if (kit) kit.music.stop(0.8);
       return this.musicEnabled;
     },
+    /** The Music button's switch, for callers that set rather than toggle. */
+    setMusicOn(on) { if (!!on !== this.musicEnabled) this.toggleMusic(); return this.musicEnabled; },
+    isMusicOn() { return this.musicEnabled; },
     startMusic() { if (this.musicEnabled) startWanted(); },
     stopMusic() { if (kit) kit.music.stop(0.8); },
 
@@ -194,7 +201,8 @@
 
   Promise.all([import(KIT + 'mixer.js'), import(KIT + 'music.js'), import(KIT + 'sfx.js')]).then(([mx, mu, sf]) => {
     const mixer = mx.createMixer({ storageKey: 'aetherquest.audio', persist: false });
-    mixer.setVolume('music', 0.8);
+    // The kit's default music level (0.3, faded in from silence); Music off is remembered here.
+    mixer.setMusicOn(eng.musicEnabled);
     const music = mu.createMusic({ mixer });
     const sfx = sf.createSfx({ mixer, theme: 'fantasy', volume: 1 }).defineAll(SOUNDS);
     kit = { mixer, music, sfx };

@@ -45,15 +45,20 @@ function initUI() {
     });
   }
 
-  const musicBtn = document.getElementById('music-btn');
-  if (musicBtn) {
-    musicBtn.textContent = window.soundEngine.musicLabel();
-    musicBtn.addEventListener('click', () => {
-      window.soundEngine.toggleMusic();
-      musicBtn.textContent = window.soundEngine.musicLabel();
-      window.soundEngine.click();
-    });
-  }
+  // Music on/off: the header's button and the title dialog's, kept in step
+  const musicBtns = ['music-btn', 'auth-music-btn'].map((id) => document.getElementById(id)).filter(Boolean);
+  const paintMusic = () => {
+    for (const b of musicBtns) {
+      b.textContent = window.soundEngine.musicLabel();
+      b.setAttribute('aria-pressed', String(window.soundEngine.isMusicOn()));
+    }
+  };
+  paintMusic();
+  for (const b of musicBtns) b.addEventListener('click', () => {
+    window.soundEngine.toggleMusic();
+    paintMusic();
+    window.soundEngine.click();
+  });
 
   // Rules Modal
   const rulesBtn = document.getElementById('rules-btn');

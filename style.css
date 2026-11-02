@@ -1061,6 +1061,13 @@ body {
 .guest-btn:hover {
   background: rgba(255, 145, 48, 0.3);
 }
+/* the title's Music on/off switch (the header's #music-btn is hidden behind this dialog) */
+.auth-music-btn {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  min-height: 44px;
+}
 
 /* Character Select Cards */
 .class-select-grid {

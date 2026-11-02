@@ -33,6 +33,14 @@ import { STYLES, GROOVES, FILLS } from './styles.js';
 import { DRUM } from './instruments.js';
 
 const SPB = 16; // 16th steps per bar (4/4)
+// Instruments that sound a power chord from one note (root + fifth + octave
+// below). A comp track on one writes the root alone: writing [root, fifth] as
+// well played the fifth twice and a ninth on top -- 6 saws a hit, not 3.
+const SELF_VOICED = new Set(['power']);
+// Its level: the two notes it replaces summed to +4.1 dB over one (their
+// doubled fifth added in phase), not the +3 an even split gives -- measured
+// solo on bullethell, punk and kaiju, so the guitar sits where it did.
+const SELF_VOICED_SPLIT = 0.775;
 const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
 const pick = (rng, arr) => arr[Math.floor(rng() * arr.length) % arr.length];
 const wpick = (rng, pairs) => {
@@ -488,12 +496,19 @@ export function compose(styleIn, seedIn = 1, { pass = 0, bpm: bpmOver = null, mo
     const [lo, hi] = t.range;
     const pat = t.pattern || 'pad';
     let prev = voicings.get(t.id) || null;
-    const push = (beat, d, p, v) => out.push({ t: beat, d, p: p + s.shift, v: clamp(Math.round(v + (dev() - 0.5) * 10), 20, 127) });
+    // `cut`: pitches drawn but not written (a self-voiced power chord's upper
+    // notes). The draw still happens, so every later note keeps its velocity.
+    let cut = null;
+    const push = (beat, d, p, v) => {
+      const n = { t: beat, d, p: p + s.shift, v: clamp(Math.round(v + (dev() - 0.5) * 10), 20, 127) };
+      if (!cut || !cut.has(p)) out.push(n);
+    };
     s.chords.forEach((ch) => {
       let v;
       if (t.power) {
         const r = nearestPc(ch.pcs[0], (lo + hi) / 2 - 4, lo, hi - 7);
         v = t.notes >= 3 ? [r, r + 7, r + 12] : [r, r + 7];
+        cut = SELF_VOICED.has(t.inst) ? new Set(v.slice(1)) : null;
       } else {
         v = voiceLead(ch.pcs, prev, lo, hi, t.notes || 3);
       }
@@ -582,7 +597,7 @@ export function compose(styleIn, seedIn = 1, { pass = 0, bpm: bpmOver = null, mo
       else if (t.role === 'drums') drumNotes(t, s, i, notes);
     });
     notes.sort((a, b) => a.t - b.t || a.p - b.p);
-    return { id: t.id, role: t.role, inst: t.inst, gain: t.role === 'comp' ? (t.gain * 1.6) / Math.sqrt(t.power ? 2 : t.notes || 3) : t.gain, pan: t.pan || 0, tier: t.tier || 0, rev: t.rev || 0, dly: t.dly || 0, notes };
+    return { id: t.id, role: t.role, inst: t.inst, gain: t.role === 'comp' ? (t.gain * 1.6) / Math.sqrt(t.power ? (SELF_VOICED.has(t.inst) ? SELF_VOICED_SPLIT : 2) : t.notes || 3) : t.gain, pan: t.pan || 0, tier: t.tier || 0, rev: t.rev || 0, dly: t.dly || 0, notes };
   });
 
   return {

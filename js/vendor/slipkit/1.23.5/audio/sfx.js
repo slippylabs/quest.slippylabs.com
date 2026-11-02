@@ -52,6 +52,7 @@ export function createSfx({ context = null, storageKey = 'slipkit.muted', volume
   const active = [];            // { name, g, end }
   const sfxrCache = new Map();
   let reverbIn = null;
+  const tail = [];              // master's chain (limiter, reverb), for dispose()
   const makeContext = mixer ? () => (mixer.unlock() ? mixer.context : null) : context || (() => {
     const AC = typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext);
     return AC ? new AC() : null;
@@ -98,6 +99,7 @@ export function createSfx({ context = null, storageKey = 'slipkit.muted', volume
         const lim = ctx.createDynamicsCompressor();
         lim.threshold.value = -6; lim.knee.value = 6; lim.ratio.value = 12; lim.attack.value = 0.002; lim.release.value = 0.12;
         master.connect(lim); lim.connect(ctx.destination);
+        tail.push(lim);
       }
       if (th && th.reverb) {
         const conv = ctx.createConvolver();
@@ -105,6 +107,7 @@ export function createSfx({ context = null, storageKey = 'slipkit.muted', volume
         const wet = ctx.createGain(); wet.gain.value = th.reverb;
         reverbIn = ctx.createGain();
         reverbIn.connect(conv); conv.connect(wet); wet.connect(master);
+        tail.push(reverbIn, conv, wet);
       }
       white = noiseBuffer(false); soft = noiseBuffer(true);
       started = true;
@@ -328,8 +331,23 @@ export function createSfx({ context = null, storageKey = 'slipkit.muted', volume
     return muted;
   }
 
+  /**
+   * Take this player out of the audio graph: stop its voices and disconnect its
+   * master + limiter/reverb chain (else they stay connected to the mixer bus,
+   * and the convolver is pulled every quantum, until the page closes). Closes
+   * the context only if this player made it. Call before replacing a player
+   * (the studio's Sound tab makes a new one per theme).
+   */
+  function dispose() {
+    for (const v of [...voices.values()]) { try { v.stop(); } catch { /* gone */ } }
+    for (const n of [master, ...tail]) { try { n && n.disconnect(); } catch { /* gone */ } }
+    tail.length = 0; active.length = 0; reverbIn = null; master = null;
+    if (ctx && !mixer && !context && !offline()) { try { ctx.close(); } catch { /* closed */ } }
+    ctx = null; started = false;
+  }
+
   const api = {
-    unlock, play, voice, listener, hush, setMuted, define,
+    unlock, play, voice, listener, hush, setMuted, define, dispose,
     defineAll(table) { for (const [k, v] of Object.entries(table)) define(k, v); return api; },
     has: (name) => !!presets[name],
     get names() { return Object.keys(presets); },

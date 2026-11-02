@@ -9,12 +9,20 @@
 //     sfx bus   -> master
 //     ambience  -> master
 //
-// The volumes (master, music, sfx, ambience) and mute persist per storageKey,
-// so every game remembers its own (persist: false for a game that saves its
-// own settings). `context` is injectable (an AudioContext, or a function
+// The volumes (master, music, sfx, ambience), mute and music-off persist per
+// storageKey, so every game remembers its own (persist: false for a game that
+// saves its own settings). Music off (setMusicOn(false)) silences only the
+// music bus, for a menu's "Music: off" switch; M's mute still silences all.
+//
+// The music bus fades in over its first ~3 s (MUSIC_FADE_IN) so a game never
+// opens at full blast, and sits at 0.3 by default: 1.23.4 and older defaulted
+// to 0.55, which players found far too loud. A stored 0.55 saved by those
+// versions (format v < 2) is read as "never chose" and drops to the new default. `context` is injectable (an AudioContext, or a function
 // returning one): tools render through an OfflineAudioContext.
 
-const DEFAULTS = { master: 0.85, music: 0.55, sfx: 0.9, ambience: 0.8, muted: false };
+const DEFAULTS = { master: 0.85, music: 0.3, sfx: 0.9, ambience: 0.8, muted: false, musicOff: false };
+const OLD_MUSIC_DEFAULT = 0.55;
+const MUSIC_FADE_IN = 1.0;   // setTargetAtTime tau: ~95% after 3 s
 
 // Identity below 0.8, a tanh knee to 1 above. Odd length, (n - 1) divisor:
 // x = 0 maps to exactly 0 (an even curve is a DC source; SlipDAW's lesson).
@@ -34,7 +42,15 @@ export function createMixer({ context = null, storageKey = 'slipkit.audio', volu
   // A game that saves its own volume settings passes persist: false and
   // drives setVolume itself.
   const persist = persistOpt && (typeof context !== 'object' || context === null);
-  if (persist) { try { Object.assign(vol, JSON.parse(localStorage.getItem(storageKey) || '{}')); } catch { /* private mode */ } }
+  if (persist) {
+    try {
+      const saved = JSON.parse(localStorage.getItem(storageKey) || '{}');
+      if (!(saved.v >= 2) && saved.music === OLD_MUSIC_DEFAULT) delete saved.music;
+      delete saved.v;
+      Object.assign(vol, saved);
+    } catch { /* private mode */ }
+  }
+  const musicGain = () => (vol.musicOff ? 0 : vol.music);
   const listeners = [];
   let muffleAmt = 0, duckDepth = 1;
 
@@ -54,6 +70,9 @@ export function createMixer({ context = null, storageKey = 'slipkit.audio', volu
     const bus = (name) => { const g = ctx.createGain(); g.gain.value = vol[name]; return g; };
     nodes.master = m; nodes.limiter = lim;
     nodes.music = bus('music'); nodes.sfx = bus('sfx'); nodes.ambience = bus('ambience');
+    // The music starts from silence and fades up (offline renders measure the level as set).
+    if (offline()) nodes.music.gain.value = musicGain();
+    else { nodes.music.gain.value = 0; nodes.music.gain.setTargetAtTime(musicGain(), ctx.currentTime, MUSIC_FADE_IN); }
     nodes.muffle = ctx.createBiquadFilter(); nodes.muffle.type = 'lowpass'; nodes.muffle.frequency.value = 20000; nodes.muffle.Q.value = 0.5;
     nodes.duck = ctx.createGain();
     // 25 Hz high-pass: decaying saws and plucked strings carry DC, and DC is headroom.
@@ -81,7 +100,7 @@ export function createMixer({ context = null, storageKey = 'slipkit.audio', volu
     } catch { ctx = null; started = false; return false; }
   }
 
-  const save = () => { if (persist) { try { localStorage.setItem(storageKey, JSON.stringify(vol)); } catch { /* private mode */ } } };
+  const save = () => { if (persist) { try { localStorage.setItem(storageKey, JSON.stringify({ ...vol, v: 2 })); } catch { /* private mode */ } } };
   const ramp = (p, v, tau = 0.03) => { if (ctx) p.setTargetAtTime(v, ctx.currentTime, tau); };
 
   return {
@@ -95,7 +114,10 @@ export function createMixer({ context = null, storageKey = 'slipkit.audio', volu
     get volumes() { return { ...vol }; },
     setVolume(name, v) {
       vol[name] = Math.max(0, Math.min(1, +v || 0));
-      if (nodes[name] && name !== 'master') ramp(nodes[name].gain, vol[name]);
+      // Moving the music slider up is asking to hear it: it turns music off off.
+      if (name === 'music' && vol.music > 0) vol.musicOff = false;
+      if (name === 'music') { if (nodes.music) ramp(nodes.music.gain, musicGain()); }
+      else if (nodes[name] && name !== 'master') ramp(nodes[name].gain, vol[name]);
       if (name === 'master' && nodes.master && !vol.muted) ramp(nodes.master.gain, vol.master);
       save();
       return vol[name];
@@ -108,6 +130,15 @@ export function createMixer({ context = null, storageKey = 'slipkit.audio', volu
     },
     toggleMute() { return this.setMuted(!vol.muted); },
     get muted() { return vol.muted; },
+    /** The menu's music switch: off silences the music bus only (effects stay). Remembered. */
+    setMusicOn(on) {
+      vol.musicOff = !on;
+      if (nodes.music) ramp(nodes.music.gain, musicGain(), on ? 0.4 : 0.05);
+      save();
+      return !vol.musicOff;
+    },
+    toggleMusic() { return this.setMusicOn(vol.musicOff); },
+    get musicOn() { return !vol.musicOff; },
     /** 0 = clear, 1 = heard through a wall. For pause menus, underwater, a concussion. */
     muffle(amount = 1, tau = 0.25) {
       muffleAmt = Math.max(0, Math.min(1, amount));

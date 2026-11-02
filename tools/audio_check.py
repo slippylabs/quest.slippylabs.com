@@ -13,6 +13,8 @@ Without --url it serves the repo itself (the save API 404s; guest play needs non
   - attacks make sound, several plays of one sound are different takes, never one twice running
   - a win, a level up, a boss and a defeat play stingers (the win gives way to the level up)
   - the rules dialog muffles the music; M mutes everything (and flips the Sound button); no page errors
+  - the music fades in to a quiet default; the Music button turns only the music off
+    (remembered, the label and aria-pressed say so) and back on
 """
 import argparse, functools, http.server, os, sys, threading, time
 sys.path.insert(0, "/home/slippy/projects/medievalmmo-dev/venv/lib/python3.13/site-packages")
@@ -66,6 +68,21 @@ def main():
         check(until(pg, f"{K}.mixer.ready && {K}.music.playing", 10), "a gesture unlocks the audio and starts the music")
         t = song()
         check(t and t["style"] == "adventure" and J("soundEngine.currentScene") == "title", "the title plays its RPG Adventure theme", str(t))
+        mg = J(f"{K}.mixer.bus('music').gain.value")
+        check(mg < 0.29, "the music fades in rather than starting at full level", f"music bus {mg:.3f}")
+        until(pg, f"{K}.mixer.bus('music').gain.value > 0.27", 10)
+        time.sleep(1.0)
+        mg = J(f"{K}.mixer.bus('music').gain.value")
+        check(0.2 < mg <= 0.31, "the music settles at the quiet default", f"music bus {mg:.3f}")
+        pg.click("#auth-music-btn")   # the title dialog's button (the header's sits behind the dialog)
+        until(pg, f"{K}.mixer.bus('music').gain.value < 0.01", 10)
+        mg, sg, st, lbl = J(f"[{K}.mixer.bus('music').gain.value, {K}.mixer.bus('sfx').gain.value, localStorage.getItem('aetherquest_music'), document.getElementById('music-btn').textContent + '|' + document.getElementById('auth-music-btn').textContent + '|' + document.getElementById('music-btn').getAttribute('aria-pressed')]")
+        check(mg < 0.01 and sg > 0.5 and st == "false" and lbl == "\u266a Music: off|\u266a Music: off|false", "the title's Music button turns only the music off, remembered, both buttons say so", f"music {mg:.3f} sfx {sg:.2f} stored {st} {lbl}")
+        pg.click("#auth-music-btn")
+        until(pg, f"{K}.mixer.bus('music').gain.value > 0.2 && {K}.music.playing", 10)
+        mg = J(f"{K}.mixer.bus('music').gain.value")
+        lbl = J("document.getElementById('music-btn').textContent + '|' + document.getElementById('music-btn').getAttribute('aria-pressed')")
+        check(mg > 0.2 and J(f"{K}.music.playing") and lbl == "\u266a Music: on|true", "and back on", f"music bus {mg:.3f} {lbl}")
         # a hero: guest -> character creation -> town
         pg.click("#guest-play-btn")
         pg.fill("#hero-name-input", "Soundcheck")
