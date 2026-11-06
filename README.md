@@ -1,5 +1,7 @@
 # AetherQuest
 
+> **ARCHIVED 2026-11-06.** Retired: nobody was playing it and no more work is planned. `quest.slippylabs.com` now 301s to the [Lab hub](https://lab.slippylabs.com), and the game is delisted from the hub, the home page and the GitHub profile. The save backend (`quest-dev` repo) is stopped too. The vhost that served it is in `~/archive/quest.slippylabs.conf.served-2026-11-06`. Its highscore entries and old leaderboard rows were kept. The notes below are history.
+
 High-fantasy turn-based JRPG inspired by AdventureQuest. 5 classes, tactical elemental combat, dynamically scaled dungeons, and cloud progress saving.
 
 **Live:** <https://quest.slippylabs.com/>
